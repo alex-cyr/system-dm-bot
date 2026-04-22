@@ -36,56 +36,51 @@ To the platform's security algorithms, system-dm-bot is indistinguishable from a
 
 ---
 
-## How to Open & Run the Project
+## 🌐 Universal Laptop Setup (God Mode)
 
-This is a strictly Golang and Google Cloud Platform (GCP) stack. To run this codebase locally, you must follow these prerequisites carefully.
+Because this bot physically controls the operating system, it has a strict setup process. If you are a teammate pulling this repo to a new laptop, you must follow these steps perfectly.
 
-### 1. Prerequisites
-- **Golang (1.21+)**: Ensure Go is installed on your machine.
-- **A C-Compiler**: Because `RobotGo` uses CGO to communicate with your operating system's hardware drivers, **you must have a C-Compiler installed**. 
-  - *On Windows:* Install [MinGW-w64](https://www.mingw-w64.org/) or TDM-GCC, and ensure it is added to your System PATH. If you try to run `go build` without this, you will get errors like `undefined: Bitmap`.
-  - *On Linux/Mac:* Install `gcc`.
-- **Google Cloud Auth**: You need your GCP credentials configured locally to test the Vertex AI vision prompts.
+### Step 1: The "C Thing" (TDM-GCC)
+Because the bot uses `RobotGo` to emulate hardware inputs, it requires C-bindings. Standard Golang cannot compile this natively on Windows.
+1. Download and install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/).
+2. You **must** add the TDM-GCC `bin` folder to your Windows System Environment `PATH` (e.g., `C:\TDM-GCC-64\bin`).
 
-### 2. Project Structure
+### Step 2: Google Cloud CLI & Billing
+The bot sends images to Vertex AI (Gemini 2.5 Flash). You need a Google Cloud account with an active billing profile.
+1. Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
+2. Open a terminal and log in:
+   ```bash
+   gcloud auth application-default login
+   ```
+3. **CRITICAL:** You must tell Google which project is paying for the API calls. Run this command to set the Quota Project:
+   ```bash
+   # Use matrix-esa-production for testing, or system-dm-bot for production
+   gcloud auth application-default set-quota-project matrix-esa-production
+   ```
 
-```text
-system-dm-bot/
-├── cmd/
-│   ├── s66-bot/          # The main Infinite State Machine (FSM) loop. The brain.
-│   ├── test-hardware/    # Safe, isolated test script for mouse/keyboard emulation.
-│   └── test-vision/      # Safe, isolated test script for Vertex AI spatial coordinate mapping.
-├── pkg/
-│   ├── cognition/        # (WIP) SMOD/RAG Memory injection for crafting the perfect A&R pitch.
-│   ├── hardware/         # RobotGo bindings for physical actuation (MoveSmooth, TypeStrDelay).
-│   ├── optics/           # Vertex AI SDK client to process screen bitmaps.
-│   └── pipeline/         # (WIP) Firestore logging to prevent duplicate messaging.
-```
+### Step 3: Project Configuration Switch
+In `cmd/test-vision/main.go` and `cmd/s66-bot/main.go`, ensure the `NewVisionClient` string matches your target Google Cloud Project ID. 
+- *Testing:* `"matrix-esa-production"`
+- *Production:* `"system-dm-bot"`
 
-### 3. Testing the Build
-Before integrating everything into the main loop, we test the "Hands" and "Eyes" independently.
+### Step 4: Compiling & Testing
+Always test the "Eyes" and "Hands" independently before running the main bot loop.
 
-**Test the Hands:**
-
-*Note: Because RobotGo requires C-bindings, you must enable CGO and use the correct build mode to prevent Windows executable corruption.*
-
+**Test the Hands (Physical Actuation):**
 ```bash
-# 1. Enable CGO locally
-go env -w CGO_ENABLED=1
-
-# 2. Build the executable safely (bypassing PE/COFF linker bugs)
+$env:CGO_ENABLED="1"
 go build -buildmode=exe -ldflags="-s -w" -o test_hands.exe ./cmd/test-hardware/main.go
-
-# 3. Run the compiled test
 .\test_hands.exe
 ```
-*(Warning: The moment you press enter on step 3, take your hand off the mouse. It will physically move your cursor and type on your screen).*
+*(Warning: The moment you press enter, take your hand off the mouse).*
 
-**Test the Eyes:**
+**Test the Eyes (Vertex AI Vision):**
 ```bash
-go run ./cmd/test-vision/main.go
+$env:CGO_ENABLED="1"
+go build -buildmode=exe -ldflags="-s -w" -o test_vision.exe ./cmd/test-vision/main.go
+.\test_vision.exe
 ```
-*(Ensure your GCP environment variables are set so it can authenticate with Vertex AI).*
+*(Check the root folder for `debug_vision.jpg` to see what the bot saw).*
 
 ---
 
