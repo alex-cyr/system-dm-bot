@@ -1,24 +1,22 @@
-# Project S66: Sovereign Reachout Agent
+# System DM Bot: A&R Agent
 
-Welcome to **Project S66**, the core automation engine for System Films' localized outreach pipeline. 
+automation engine for System Films' localized outreach pipeline. 
 
-This repository contains the Golang architecture for a sovereign **Vision-Language-Action (VLA) Agent**. Unlike traditional bots, S66 is designed to operate seamlessly within highly guarded social platforms without triggering automated anti-bot security systems.
+This repository contains the Golang architecture for a sovereign **Vision-Language-Action (VLA) Agent**. Unlike traditional bots, system-dm-bot is designed to operate seamlessly within highly guarded social platforms without triggering automated anti-bot security systems.
 
-## Why This Architecture is the Ultimate Move
+## Why
 
 Historically, web automation relied on reading a website's background code (DOM manipulation) or reverse-engineering hidden APIs. In the current digital landscape, trillion-dollar AI systems employed by social networks instantly detect and ban headless browsers and scraper scripts. 
-
-**S66 fundamentally changes the paradigm.** 
 
 It does not read code; it reads pixels. It does not send HTTP requests to internal endpoints; it physically commands the operating system's hardware mouse and keyboard drivers. 
 1. **The Eyes:** Vertex AI (Gemini) takes a screenshot of the virtual monitor and returns the exact [X, Y] pixel coordinates of the interface elements we want to interact with.
 2. **The Hands:** We utilize low-level C-bindings (`RobotGo`) to emulate human kinematics—moving the mouse along randomized Bezier curves and typing with millisecond, human-like cadences.
 
-To the platform's security algorithms, S66 is indistinguishable from a System Films A&R representative sitting at a computer in Atlanta, reading a screen, and physically clicking a mouse.
+To the platform's security algorithms, system-dm-bot is indistinguishable from a System Films A&R representative sitting at a computer in Atlanta, reading a screen, and physically clicking a mouse.
 
 ---
 
-## 🛠️ Soldat Workflow: How to Open & Run the Project
+## How to Open & Run the Project
 
 This is a strictly Golang and Google Cloud Platform (GCP) stack. To run this codebase locally, you must follow these prerequisites carefully.
 
@@ -30,7 +28,7 @@ This is a strictly Golang and Google Cloud Platform (GCP) stack. To run this cod
 - **Google Cloud Auth**: You need your GCP credentials configured locally to test the Vertex AI vision prompts.
 
 ### 2. Project Structure
-The repository is modularized to ensure pristine workflow organization:
+
 ```text
 system-dm-bot/
 ├── cmd/
@@ -61,9 +59,9 @@ go run ./cmd/test-vision/main.go
 
 ---
 
-## 🤝 Where The Team Can Help
+##  Team Help
 
-We have cleanly separated the logic so multiple team members can build this to life without stepping on each other's toes.
+We have cleanly separated the logic so multiple team members can build this.
 
 ### 1. The Prompt Engineers (Focus: `pkg/optics/vision.go`)
 We need the Vertex AI spatial prompts to be bulletproof. Your job is to upload screenshots of Instagram DMs to Google AI Studio, figure out the exact text prompt needed to make Gemini return the perfect bounding box for the "New Message" dot or the "Reply" text box, and integrate those prompts here.
