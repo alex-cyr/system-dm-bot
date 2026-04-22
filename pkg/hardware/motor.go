@@ -80,3 +80,11 @@ func ScrollDown() {
 	robotgo.Scroll(0, -100)
 	time.Sleep(1 * time.Second)
 }
+
+// RefreshPage presses the F5 key to reload the browser.
+func RefreshPage() {
+	fmt.Println("Hardware: Pressing F5 to refresh page")
+	robotgo.KeyTap("f5")
+	// Give the browser 5 seconds to fully reload the page
+	time.Sleep(5 * time.Second)
+}

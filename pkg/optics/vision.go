@@ -77,3 +77,35 @@ func (vc *VisionClient) LocateElement(ctx context.Context, imageBytes []byte, pr
 
 	return []float64{ymin, xmin, ymax, xmax}, nil
 }
+
+// AnalyzeImage takes image bytes and a prompt, returning the raw text string from Vertex.
+// Used for cognitive decision making (e.g., YES/NO filters).
+func (vc *VisionClient) AnalyzeImage(ctx context.Context, imageBytes []byte, prompt string) (string, error) {
+	fmt.Printf("Optics: Sending image (%d bytes) to Vertex AI for cognitive analysis...\n", len(imageBytes))
+	fmt.Printf("Optics Prompt: %s\n", prompt)
+
+	model := vc.client.GenerativeModel("gemini-2.5-flash")
+	model.SetTemperature(0.1) // Slight variance for text generation, but mostly deterministic
+
+	imgData := genai.ImageData("jpeg", imageBytes)
+	
+	resp, err := model.GenerateContent(ctx, imgData, genai.Text(prompt))
+	if err != nil {
+		return "", fmt.Errorf("vertex ai inference failed: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("vertex ai returned empty response")
+	}
+
+	var responseText string
+	switch part := resp.Candidates[0].Content.Parts[0].(type) {
+	case genai.Text:
+		responseText = string(part)
+	default:
+		return "", fmt.Errorf("unexpected response type from vertex ai")
+	}
+	
+	fmt.Printf("Raw Cognitive Response: %s\n", responseText)
+	return responseText, nil
+}
