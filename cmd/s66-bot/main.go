@@ -16,6 +16,7 @@ type Agent struct {
 	Ctx         context.Context
 	Vision      *optics.VisionClient
 	ScrollCount int
+	SkillPrompt string
 }
 
 // State defines the function signature for our FSM.
@@ -37,10 +38,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	skillBytes, err := os.ReadFile(".agents/skills/instagram-outreach/SKILL.md")
+	if err != nil {
+		fmt.Println("Warning: Could not load SKILL.md, proceeding without dynamic personality.")
+	}
+
 	agent := &Agent{
 		Ctx:         ctx,
 		Vision:      vc,
 		ScrollCount: 0,
+		SkillPrompt: string(skillBytes),
 	}
 
 	var currentState State = StateObserve
@@ -169,8 +176,22 @@ func StateReadAndReply(a *Agent) (State, error) {
 	hardware.MoveSmooth(absoluteX, absoluteY)
 	hardware.Click()
 
-	// Type the pre-drafted pitch
-	hardware.TypeStrDelay("Hey! We are casting for a music video in Atlanta next week. Let me know if you are free!")
+	// Type the dynamically generated pitch
+	fmt.Println("Cognitive Engine: Drafting personalized pitch...")
+	draftPrompt := fmt.Sprintf("Based on the following personality rules, draft a 1 to 2 sentence opening pitch to this Instagram user. Output ONLY the raw pitch text. Do not include quotes, markdown, or any other text.\n\nRules:\n%s", a.SkillPrompt)
+	
+	pitchText, err := a.Vision.AnalyzeImage(a.Ctx, imgBytes, draftPrompt)
+	if err != nil || pitchText == "" {
+		fmt.Println("Failed to draft pitch dynamically. Using fallback.")
+		pitchText = "Hey! We are an Atlanta video crew shooting $400 cinema-grade music videos. Let me know if you are interested in a shoot!"
+	}
+
+	// Clean up any stray quotes or whitespace from the LLM
+	pitchText = strings.TrimSpace(pitchText)
+	pitchText = strings.Trim(pitchText, "\"")
+	pitchText = strings.Trim(pitchText, "'")
+
+	hardware.TypeStrDelay(pitchText)
 	time.Sleep(1 * time.Second)
 	
 	// Hit Enter to send
