@@ -46,10 +46,20 @@ system-dm-bot/
 Before integrating everything into the main loop, we test the "Hands" and "Eyes" independently.
 
 **Test the Hands:**
+
+*Note: Because RobotGo requires C-bindings, you must enable CGO and use the correct build mode to prevent Windows executable corruption.*
+
 ```bash
-go run ./cmd/test-hardware/main.go
+# 1. Enable CGO locally
+go env -w CGO_ENABLED=1
+
+# 2. Build the executable safely (bypassing PE/COFF linker bugs)
+go build -buildmode=exe -ldflags="-s -w" -o test_hands.exe ./cmd/test-hardware/main.go
+
+# 3. Run the compiled test
+.\test_hands.exe
 ```
-*(Warning: This will physically move your mouse and type on your screen. Keep your hands off the keyboard while it runs).*
+*(Warning: The moment you press enter on step 3, take your hand off the mouse. It will physically move your cursor and type on your screen).*
 
 **Test the Eyes:**
 ```bash
