@@ -159,8 +159,8 @@ func StateReadAndReply(a *Agent) (State, error) {
 
 	fmt.Println("Cognitive Filter Decision: YES! Proceeding with pitch.")
 
-	// Locate the input box
-	prompt := "Find the 'Message...' text input box at the bottom of the chat. Return only the bounding box [ymin, xmin, ymax, xmax]."
+	// Locate the input box using highly precise text targeting
+	prompt := "Find the exact word 'Message...' inside the text input area at the bottom. Return only the bounding box."
 	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
 	if err != nil {
 		fmt.Println("Could not find the message input box. Backing out.")
@@ -175,6 +175,9 @@ func StateReadAndReply(a *Agent) (State, error) {
 	// Click into the message box
 	hardware.MoveSmooth(absoluteX, absoluteY)
 	hardware.Click()
+	
+	// Phase 6: Guarantee the browser registers the focus before the bot starts typing
+	time.Sleep(1 * time.Second)
 
 	// Type the dynamically generated pitch
 	fmt.Println("Cognitive Engine: Drafting personalized pitch...")
