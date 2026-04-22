@@ -1,7 +1,9 @@
 package hardware
 
 import (
+	"bytes"
 	"fmt"
+	"image/jpeg"
 	"math/rand"
 	"time"
 
@@ -46,8 +48,21 @@ func TypeStrDelay(text string) {
 	}
 }
 
-// CaptureScreen returns the current screen buffer as a byte slice.
+// CaptureScreen returns the current screen buffer as a JPEG byte slice.
 func CaptureScreen() ([]byte, error) {
 	fmt.Println("Hardware: Capturing screen buffer")
-	return []byte("simulated_image_bytes"), nil
+	
+	img, err := robotgo.CaptureImg()
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture screen: %w", err)
+	}
+
+	buf := new(bytes.Buffer)
+	// Compress to 85% JPEG to save Vertex AI bandwidth
+	err = jpeg.Encode(buf, img, &jpeg.Options{Quality: 85})
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode screen to JPEG: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
