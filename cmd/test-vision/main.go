@@ -24,7 +24,7 @@ func main() {
 
 	// 2. Initialize Vertex Vision Client
 	// Note: You must set up GCP credentials to actually run a live query
-	client, err := optics.NewVisionClient("system-dm-bot", "us-central1")
+	client, err := optics.NewVisionClient("matrix-esa-production", "us-central1")
 	if err != nil {
 		fmt.Printf("Failed to initialize Vision Client: %v\n", err)
 		os.Exit(1)

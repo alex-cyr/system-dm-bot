@@ -70,3 +70,13 @@ func CaptureScreen() ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
+
+// ScrollDown scrolls the mouse wheel down to see more DMs.
+func ScrollDown() {
+	fmt.Println("Hardware: Scrolling down")
+	// robotgo.Scroll(x, y) where x is horizontal and y is vertical.
+	// Positive y is scroll down in some OSes, but usually negative y is down. 
+	// In RobotGo on Windows, y > 0 is scroll up, y < 0 is scroll down. 
+	robotgo.Scroll(0, -100)
+	time.Sleep(1 * time.Second)
+}

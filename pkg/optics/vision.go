@@ -35,7 +35,7 @@ func (vc *VisionClient) LocateElement(ctx context.Context, imageBytes []byte, pr
 	fmt.Printf("Optics: Sending image (%d bytes) to Vertex AI for spatial analysis...\n", len(imageBytes))
 	fmt.Printf("Optics Prompt: %s\n", prompt)
 
-	model := vc.client.GenerativeModel("gemini-1.5-pro-preview-0409")
+	model := vc.client.GenerativeModel("gemini-2.5-flash")
 	model.SetTemperature(0.0) // We want deterministic bounding boxes
 
 	imgData := genai.ImageData("jpeg", imageBytes)
