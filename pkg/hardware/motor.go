@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/jpeg"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/go-vgo/robotgo"
@@ -63,6 +64,9 @@ func CaptureScreen() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode screen to JPEG: %w", err)
 	}
+
+	// Observability: Save to disk so developers can conceptually "see" what the bot sees
+	_ = os.WriteFile("debug_vision.jpg", buf.Bytes(), 0644)
 
 	return buf.Bytes(), nil
 }

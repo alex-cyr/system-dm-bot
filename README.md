@@ -12,6 +12,26 @@ It does not read code; it reads pixels. It does not send HTTP requests to intern
 1. **The Eyes:** Vertex AI (Gemini) takes a screenshot of the virtual monitor and returns the exact [X, Y] pixel coordinates of the interface elements we want to interact with.
 2. **The Hands:** We utilize low-level C-bindings (`RobotGo`) to emulate human kinematics—moving the mouse along randomized Bezier curves and typing with millisecond, human-like cadences.
 
+## Architecture: The S66 7-Layer OSI Model
+
+To help conceptualize this invisible "headless" terminal bot, we map the VLA architecture to a 7-layer OSI structure:
+
+| Layer | Name | Component | Function in S66 Reachout Bot |
+|---|---|---|---|
+| **7** | **Application (Personality)** | `SKILL.md` | The highest layer. Dictates the bot's "soul", persona, tone, and specific Atlanta System Films outreach instructions. |
+| **6** | **Presentation (Parsing)** | `pkg/optics/vision.go` | Translates the unstructured Vertex JSON response into precise `[Y, X]` float arrays. |
+| **5** | **Session (FSM Loop)** | `cmd/s66-bot/main.go` | The Infinite State Machine that manages the active DM session (Wait -> Screenshot -> Reason -> Click -> Type). |
+| **4** | **Transport (API / Token)** | `gcloud ADC` | The secure, encrypted tunnel that transports images and text to Google Cloud via your Application Default Credentials. |
+| **3** | **Network (Vertex Cloud)** | `genai.Client` | Gemini 1.5 Pro multimodal processing. This is the "Brain" that does the heavy lifting of understanding the screen. |
+| **2** | **Data Link (Memory)** | `pkg/pipeline` | Firestore / SQLite tracking. Ensures we don't message the same user twice. |
+| **1** | **Physical (Actuation)** | `pkg/hardware/motor.go` | Raw OS-level C-bindings. Uses `robotgo` to capture physical VRAM bytes and actuate literal hardware mouse/keyboard events. |
+
+Because Layer 1 completely bypasses the browser's DOM (HTML/CSS), Instagram cannot block it. It is physically simulating a human being.
+
+## Visual Debugging
+Because the bot runs in the background without a UI dashboard, we built **Observability** into Layer 1. 
+Every time the bot takes a screenshot, it saves it to the root folder as `debug_vision.jpg`. You can click this file to literally "see" what the bot is seeing at any given moment.
+
 To the platform's security algorithms, system-dm-bot is indistinguishable from a System Films A&R representative sitting at a computer in Atlanta, reading a screen, and physically clicking a mouse.
 
 ---
