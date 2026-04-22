@@ -127,6 +127,11 @@ func StateScroll(a *Agent) (State, error) {
 		return StateObserve, nil
 	}
 
+	// Phase 7: Force mouse to hover over the left inbox pane before scrolling
+	// (Prevents scrolling the right-hand chat history by accident)
+	hardware.MoveSmooth(300, 500)
+	time.Sleep(500 * time.Millisecond)
+
 	hardware.ScrollDown()
 	a.ScrollCount++
 	

@@ -1,101 +1,62 @@
-# System DM Bot: A&R Agent
+# S66 Reachout Bot (VLA Sovereign Agent)
 
-automation engine for System Films' localized outreach pipeline. 
+![S66 Architecture](debug_vision.jpg)
 
-This repository contains the Golang architecture for a sovereign **Vision-Language-Action (VLA) Agent**. Unlike traditional bots, system-dm-bot is designed to operate seamlessly within highly guarded social platforms without triggering automated anti-bot security systems.
+The **S66 Reachout Bot** is a Vision-Language-Action (VLA) Sovereign Agent built for System Films in Atlanta. It autonomously navigates the Instagram Desktop UI, visually hunts for inbound leads using Computer Vision, evaluates the conversation context using Cognitive AI, and dynamically generates personalized $400 music video pitches.
 
-## Why
+## System Architecture
 
-Historically, web automation relied on reading a website's background code (DOM manipulation) or reverse-engineering hidden APIs. In the current digital landscape, trillion-dollar AI systems employed by social networks instantly detect and ban headless browsers and scraper scripts. 
-
-It does not read code; it reads pixels. It does not send HTTP requests to internal endpoints; it physically commands the operating system's hardware mouse and keyboard drivers. 
-1. **The Eyes:** Vertex AI (Gemini) takes a screenshot of the virtual monitor and returns the exact [X, Y] pixel coordinates of the interface elements we want to interact with.
-2. **The Hands:** We utilize low-level C-bindings (`RobotGo`) to emulate human kinematics—moving the mouse along randomized Bezier curves and typing with millisecond, human-like cadences.
-
-## Architecture: The S66 7-Layer OSI Model
-
-To help conceptualize this invisible "headless" terminal bot, we map the VLA architecture to a 7-layer OSI structure:
-
-| Layer | Name | Component | Function in S66 Reachout Bot |
-|---|---|---|---|
-| **7** | **Application (Personality)** | `SKILL.md` | The highest layer. Dictates the bot's "soul", persona, tone, and specific Atlanta System Films outreach instructions. |
-| **6** | **Presentation (Parsing)** | `pkg/optics/vision.go` | Translates the unstructured Vertex JSON response into precise `[Y, X]` float arrays. |
-| **5** | **Session (FSM Loop)** | `cmd/s66-bot/main.go` | The Infinite State Machine that manages the active DM session (Wait -> Screenshot -> Reason -> Click -> Type). |
-| **4** | **Transport (API / Token)** | `gcloud ADC` | The secure, encrypted tunnel that transports images and text to Google Cloud via your Application Default Credentials. |
-| **3** | **Network (Vertex Cloud)** | `genai.Client` | Gemini 1.5 Pro multimodal processing. This is the "Brain" that does the heavy lifting of understanding the screen. |
-| **2** | **Data Link (Memory)** | `pkg/pipeline` | Firestore / SQLite tracking. Ensures we don't message the same user twice. |
-| **1** | **Physical (Actuation)** | `pkg/hardware/motor.go` | Raw OS-level C-bindings. Uses `robotgo` to capture physical VRAM bytes and actuate literal hardware mouse/keyboard events. |
-
-Because Layer 1 completely bypasses the browser's DOM (HTML/CSS), Instagram cannot block it. It is physically simulating a human being.
-
-## Visual Debugging
-Because the bot runs in the background without a UI dashboard, we built **Observability** into Layer 1. 
-Every time the bot takes a screenshot, it saves it to the root folder as `debug_vision.jpg`. You can click this file to literally "see" what the bot is seeing at any given moment.
-
-To the platform's security algorithms, system-dm-bot is indistinguishable from a System Films A&R representative sitting at a computer in Atlanta, reading a screen, and physically clicking a mouse.
+The bot operates on an Infinite State Machine (FSM) loop with three core engines:
+1. **Optics Layer (`pkg/optics`)**: Uses Google Vertex AI (Gemini 2.5 Flash) to analyze spatial UI coordinates and perform cognitive evaluations of chat history.
+2. **Motor Layer (`pkg/hardware`)**: Uses `robotgo` to hijack physical OS-level mouse and keyboard drivers for human-like kinematic movement (bezier curves).
+3. **Cognitive Engine (`SKILL.md`)**: Injects the System Films persona to dynamically draft unique pitches.
 
 ---
 
-## 🌐 Universal Laptop Setup (God Mode)
+## Team Deployment & Cloud Billing
 
-Because this bot physically controls the operating system, it has a strict setup process. If you are a teammate pulling this repo to a new laptop, you must follow these steps perfectly.
+The S66 Bot runs on a centralized **Google Cloud Platform (GCP)** architecture (`matrix-esa-production`). 
+**DO NOT distribute API keys or Service Account JSON files.** 
 
-### Step 1: The "C Thing" (TDM-GCC)
-Because the bot uses `RobotGo` to emulate hardware inputs, it requires C-bindings. Standard Golang cannot compile this natively on Windows.
-1. Download and install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/).
-2. You **must** add the TDM-GCC `bin` folder to your Windows System Environment `PATH` (e.g., `C:\TDM-GCC-64\bin`).
+Instead, the billing and infrastructure are centrally controlled by the System Films Administrator using GCP Identity and Access Management (IAM). 
 
-### Step 2: Google Cloud CLI & Billing
-The bot sends images to Vertex AI (Gemini 2.5 Flash). You need a Google Cloud account with an active billing profile.
-1. Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
-2. Open a terminal and log in:
+### Setup Instructions for Teammates
+
+If you are a System Films teammate installing this on your laptop, follow these steps exactly:
+
+1. **Install Prerequisites**:
+   - Install [Go (Golang)](https://go.dev/dl/).
+   - Install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) (Required for CGO hardware drivers). Add it to your Windows `PATH`.
+   - Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
+
+2. **Authenticate with Google Cloud**:
+   Open your terminal and run the following command to authenticate using your corporate Google account:
    ```bash
-   gcloud auth application-default login
+   gcloud auth application-default login --quota-project=matrix-esa-production
    ```
-3. **CRITICAL:** You must tell Google which project is paying for the API calls. Run this command to set the Quota Project:
-   ```bash
-   # Use matrix-esa-production for testing, or system-dm-bot for production
-   gcloud auth application-default set-quota-project matrix-esa-production
+   *(Note: The System Admin must add your Google email to the GCP IAM as a `Vertex AI User` before this will work).*
+
+3. **Clone and Compile**:
+   ```powershell
+   git clone https://github.com/alex-cyr/system-dm-bot.git
+   cd system-dm-bot
+   go build -ldflags="-s -w" -o s66-bot.exe ./cmd/s66-bot/main.go
    ```
-
-### Step 3: Project Configuration Switch
-In `cmd/test-vision/main.go` and `cmd/s66-bot/main.go`, ensure the `NewVisionClient` string matches your target Google Cloud Project ID. 
-- *Testing:* `"matrix-esa-production"`
-- *Production:* `"system-dm-bot"`
-
-### Step 4: Compiling & Testing
-Always test the "Eyes" and "Hands" independently before running the main bot loop.
-
-**Test the Hands (Physical Actuation):**
-```bash
-$env:CGO_ENABLED="1"
-go build -buildmode=exe -ldflags="-s -w" -o test_hands.exe ./cmd/test-hardware/main.go
-.\test_hands.exe
-```
-*(Warning: The moment you press enter, take your hand off the mouse).*
-
-**Test the Eyes (Vertex AI Vision):**
-```bash
-$env:CGO_ENABLED="1"
-go build -buildmode=exe -ldflags="-s -w" -o test_vision.exe ./cmd/test-vision/main.go
-.\test_vision.exe
-```
-*(Check the root folder for `debug_vision.jpg` to see what the bot saw).*
 
 ---
 
-##  Team Help
+## Execution Manual (God Mode)
 
-We have cleanly separated the logic so multiple team members can build this.
+Before running the agent, you must set up your physical desktop environment.
 
-### 1. The Prompt Engineers (Focus: `pkg/optics/vision.go`)
-We need the Vertex AI spatial prompts to be bulletproof. Your job is to upload screenshots of Instagram DMs to Google AI Studio, figure out the exact text prompt needed to make Gemini return the perfect bounding box for the "New Message" dot or the "Reply" text box, and integrate those prompts here.
+1. **Hardware Setup**: Move your web browser to your **Primary Monitor**. Ensure it is fully maximized.
+2. **Instagram Setup**: Log into the designated System Films Instagram account and open the DM Inbox page (`instagram.com/direct/inbox/`).
+3. **Launch the Engine**: Open your terminal, ensure it is visible at the bottom of the screen, and run:
+   ```powershell
+   .\s66-bot.exe
+   ```
+4. **Hands Off**: The moment you hit enter, take your hand off the physical mouse. The Sovereign Agent is now driving.
 
-### 2. The Cultural Strategists (Focus: `pkg/cognition/smod.go`)
-An agent's physical stealth is useless if it sounds like a corporate bot. This module handles the generation of the actual DM reply. We need logic that takes the prospect's profile data and drafts an authentic, culturally tuned pitch for a System Films music video shoot (e.g., pricing, locations, aesthetic matching). 
-
-### 3. The Kinematic Engineers (Focus: `pkg/hardware/motor.go`)
-Tune the RobotGo parameters. Adjust the Bezier curve mathematical bounds, tweak the typing delay randomization, and ensure the physical movements look as humanly imperfect as possible to guarantee we never get banned.
-
-### 4. The Database Architects (Focus: `pkg/pipeline/memory.go`)
-We need to connect this to Google Cloud Firestore. Every time a DM is sent, it must be logged so the bot never double-pitches the same artist twice. 
+### The Kill Switch (Emergency Stop)
+Because the bot hijacks your physical mouse drivers and runs on an infinite loop, it will not stop until you physically intervene. 
+If it enters a chaotic state or you need to shut it down, **drag your mouse to the terminal and press `CTRL + C` on your keyboard.** This instantly kills the CGO process.
