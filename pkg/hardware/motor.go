@@ -88,3 +88,10 @@ func RefreshPage() {
 	// Give the browser 5 seconds to fully reload the page
 	time.Sleep(5 * time.Second)
 }
+
+// PressEnter presses the physical Enter key.
+func PressEnter() {
+	fmt.Println("Hardware: Pressing Enter key")
+	robotgo.KeyTap("enter")
+	time.Sleep(500 * time.Millisecond)
+}

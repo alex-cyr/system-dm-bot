@@ -88,6 +88,12 @@ func StateObserve(a *Agent) (State, error) {
 	absoluteX := int((xCenter / 1000.0) * 1920.0)
 	absoluteY := int((yCenter / 1000.0) * 1080.0)
 
+	// Hardening Phase 4: Offset X to click the profile picture/name instead of the far-right blue dot void
+	absoluteX -= 200
+	if absoluteX < 10 {
+		absoluteX = 10
+	}
+
 	fmt.Printf("Found unread message at X: %d, Y: %d\n", absoluteX, absoluteY)
 	
 	// Move and click!
@@ -136,12 +142,12 @@ func StateReadAndReply(a *Agent) (State, error) {
 	decision, err := a.Vision.AnalyzeImage(a.Ctx, imgBytes, filterPrompt)
 	if err != nil {
 		fmt.Println("Error analyzing image, backing out safely.")
-		return StateReset, nil
+		return StateObserve, nil
 	}
 
 	if strings.Contains(strings.ToUpper(decision), "NO") {
 		fmt.Println("Cognitive Filter Decision: NO. This is not a lead. Backing out.")
-		return StateReset, nil
+		return StateObserve, nil
 	}
 
 	fmt.Println("Cognitive Filter Decision: YES! Proceeding with pitch.")
@@ -151,7 +157,7 @@ func StateReadAndReply(a *Agent) (State, error) {
 	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
 	if err != nil {
 		fmt.Println("Could not find the message input box. Backing out.")
-		return StateReset, nil
+		return StateObserve, nil
 	}
 
 	yCenter := (coords[0] + coords[2]) / 2
@@ -168,38 +174,9 @@ func StateReadAndReply(a *Agent) (State, error) {
 	time.Sleep(1 * time.Second)
 	
 	// Hit Enter to send
-	hardware.TypeStrDelay("\n")
+	hardware.PressEnter()
 	time.Sleep(2 * time.Second) // wait for send
 
-	return StateReset, nil
-}
-
-// StateReset clicks back to the main DM board.
-func StateReset(a *Agent) (State, error) {
-	fmt.Println("\n[STATE] Reset: Returning to inbox...")
-	
-	imgBytes, err := hardware.CaptureScreen()
-	if err != nil {
-		return nil, err
-	}
-
-	prompt := "Find the 'Back' arrow or button in the top left. Return only the bounding box."
-	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
-	if err != nil {
-		fmt.Println("Could not find the back button. Re-observing...")
-		return StateObserve, nil
-	}
-
-	yCenter := (coords[0] + coords[2]) / 2
-	xCenter := (coords[1] + coords[3]) / 2
-	absoluteX := int((xCenter / 1000.0) * 1920.0)
-	absoluteY := int((yCenter / 1000.0) * 1080.0)
-
-	hardware.MoveSmooth(absoluteX, absoluteY)
-	hardware.Click()
-
-	// Wait for the inbox to load
-	time.Sleep(3 * time.Second)
-	
+	// Desktop Split-Pane UI doesn't have a back button. Return straight to observe.
 	return StateObserve, nil
 }
