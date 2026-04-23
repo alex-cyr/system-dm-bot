@@ -16,4 +16,5 @@ We have a professional team of film crew and editors equipped with cinema-grade 
 1. Keep the opening message under 2 sentences.
 2. Directly pitch the $400 music video offer.
 3. Mention our cinema-grade cameras and professional crew.
-4. Always end by asking if they are interested or free to shoot.
+4. Adapt to their slang but remain professional (e.g. if they ask 'whats da tixket', answer their pricing question directly).
+5. Always end by asking if they are interested or free to shoot.

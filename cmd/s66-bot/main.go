@@ -77,7 +77,7 @@ func StateObserve(a *Agent) (State, error) {
 		return nil, err
 	}
 
-	prompt := "Find the unread message blue dot indicator. If it exists, return only the bounding box [ymin, xmin, ymax, xmax]. If there are no unread messages, return NONE."
+	prompt := "Find the unread message blue dot indicator in the inbox list pane (which is the middle-left column). Ignore any icons on the far-left black navigation bar. Return only the bounding box [ymin, xmin, ymax, xmax]. If there are no unread messages, return NONE."
 	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
 	if err != nil {
 		if strings.Contains(err.Error(), "could not find bounding box") || strings.Contains(err.Error(), "NONE") {
@@ -91,14 +91,22 @@ func StateObserve(a *Agent) (State, error) {
 	yCenter := (coords[0] + coords[2]) / 2
 	xCenter := (coords[1] + coords[3]) / 2
 	
-	// Convert normalized (0.0 - 1000.0) to absolute screen pixels.
-	absoluteX := int((xCenter / 1000.0) * 1920.0)
-	absoluteY := int((yCenter / 1000.0) * 1080.0)
+	screenWidth, screenHeight := hardware.GetScreenDimensions()
+	
+	// Convert normalized (0.0 - 1000.0) to absolute screen pixels dynamically for ANY monitor.
+	absoluteX := int((xCenter / 1000.0) * float64(screenWidth))
+	absoluteY := int((yCenter / 1000.0) * float64(screenHeight))
+
+	// Filter out far-left navigation bar hallucinations (e.g., Search icon)
+	if absoluteX < 150 {
+		fmt.Println("Ignored blue dot hallucination on the far-left nav bar.")
+		return StateScroll, nil
+	}
 
 	// Hardening Phase 4: Offset X to click the profile picture/name instead of the far-right blue dot void
 	absoluteX -= 200
-	if absoluteX < 10 {
-		absoluteX = 10
+	if absoluteX < 150 {
+		absoluteX = 150
 	}
 
 	fmt.Printf("Found unread message at X: %d, Y: %d\n", absoluteX, absoluteY)
@@ -128,8 +136,8 @@ func StateScroll(a *Agent) (State, error) {
 	}
 
 	// Phase 7: Force mouse to hover over the left inbox pane before scrolling
-	// (Prevents scrolling the right-hand chat history by accident)
-	hardware.MoveSmooth(300, 500)
+	// Moved down to Y:750 to prevent accidentally scrolling the top "Stories" section
+	hardware.MoveSmooth(250, 750)
 	time.Sleep(500 * time.Millisecond)
 
 	hardware.ScrollDown()
@@ -150,7 +158,7 @@ func StateReadAndReply(a *Agent) (State, error) {
 	}
 
 	// Cognitive Filter: YES / NO
-	filterPrompt := "Read this Instagram conversation. Is this user a potential new lead for a music video? If they are a friend, a past client, or not a lead, reply with exactly 'NO'. If they are a new potential lead, reply with exactly 'YES'."
+	filterPrompt := "Read this Instagram conversation. Is this user a potential new lead for a music video? Pay extremely close attention to Atlanta slang and informal DMs. Examples of leads: 'whats da tixket' (what's the price), 'how much for a vid', 'yall shooting?', 'wya', 'send rates', 'need sum work done'. Any inquiry about price, info, availability, or video packages is a lead. If they are a friend, a past client, or explicitly not interested, reply with exactly 'NO'. If they are a new potential lead, reply with exactly 'YES'."
 	decision, err := a.Vision.AnalyzeImage(a.Ctx, imgBytes, filterPrompt)
 	if err != nil {
 		fmt.Println("Error analyzing image, backing out safely.")
@@ -174,14 +182,18 @@ func StateReadAndReply(a *Agent) (State, error) {
 
 	yCenter := (coords[0] + coords[2]) / 2
 	xCenter := (coords[1] + coords[3]) / 2
-	absoluteX := int((xCenter / 1000.0) * 1920.0)
-	absoluteY := int((yCenter / 1000.0) * 1080.0)
+	
+	screenWidth, screenHeight := hardware.GetScreenDimensions()
+	
+	absoluteX := int((xCenter / 1000.0) * float64(screenWidth))
+	absoluteY := int((yCenter / 1000.0) * float64(screenHeight))
 
 	// Click into the message box
 	hardware.MoveSmooth(absoluteX, absoluteY)
 	hardware.Click()
+	time.Sleep(200 * time.Millisecond)
+	hardware.Click() // Phase 6: Double-click to absolutely guarantee focus lock
 	
-	// Phase 6: Guarantee the browser registers the focus before the bot starts typing
 	time.Sleep(1 * time.Second)
 
 	// Type the dynamically generated pitch
@@ -199,7 +211,12 @@ func StateReadAndReply(a *Agent) (State, error) {
 	pitchText = strings.Trim(pitchText, "\"")
 	pitchText = strings.Trim(pitchText, "'")
 
-	hardware.TypeStrDelay(pitchText)
+	err = hardware.PasteText(pitchText)
+	if err != nil {
+		fmt.Printf("Warning: Failed to paste text via clipboard: %v\n", err)
+		// Fallback to typing if clipboard fails for some reason
+		hardware.TypeStrDelay(pitchText)
+	}
 	time.Sleep(1 * time.Second)
 	
 	// Hit Enter to send

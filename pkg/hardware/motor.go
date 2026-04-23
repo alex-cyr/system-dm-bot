@@ -9,11 +9,17 @@ import (
 	"time"
 
 	"github.com/go-vgo/robotgo"
+	"github.com/atotto/clipboard"
 )
 
 // InitMotor initializes any required hardware configurations.
 func InitMotor() {
 	robotgo.MouseSleep = 100
+}
+
+// GetScreenDimensions returns the dynamic width and height of the primary monitor.
+func GetScreenDimensions() (int, int) {
+	return robotgo.GetScreenSize()
 }
 
 // MoveSmooth moves the mouse cursor to (x,y) along a human-like Bezier curve.
@@ -47,6 +53,24 @@ func TypeStrDelay(text string) {
 		delay := time.Duration(rand.Intn(120)+80) * time.Millisecond
 		time.Sleep(delay)
 	}
+}
+
+// PasteText writes text to the OS clipboard and simulates a Ctrl+V physical keystroke.
+// This completely bypasses typing glitches on long strings with special characters.
+func PasteText(text string) error {
+	fmt.Printf("Hardware: Pasting text from clipboard\n")
+	err := clipboard.WriteAll(text)
+	if err != nil {
+		return err
+	}
+	
+	// Give the OS a tiny fraction of a second to register the clipboard write
+	time.Sleep(100 * time.Millisecond)
+	
+	// Simulate physical Ctrl + V
+	robotgo.KeyTap("v", "control")
+	time.Sleep(500 * time.Millisecond)
+	return nil
 }
 
 // CaptureScreen returns the current screen buffer as a JPEG byte slice.
