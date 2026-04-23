@@ -72,8 +72,8 @@ func StateObserve(a *Agent) (State, error) {
 	// Park the mouse in the corner to prevent CSS hover menus from expanding and blocking the screenshot
 	hardware.ParkMouse()
 
-	// Give the UI a moment to settle before taking screenshot
-	time.Sleep(2 * time.Second)
+	// Give the UI a moment to settle and throttle API to stay under Google Cloud 15 RPM limits
+	time.Sleep(5 * time.Second)
 
 	screenWidth, screenHeight := hardware.GetScreenDimensions()
 	
@@ -101,8 +101,13 @@ func StateObserve(a *Agent) (State, error) {
 			fmt.Println("No unread messages found in this viewport.")
 			return StateScroll, nil
 		}
-		fmt.Printf("Vertex API Error (Retrying in 5s): %v\n", err)
-		time.Sleep(5 * time.Second)
+		if strings.Contains(err.Error(), "ResourceExhausted") || strings.Contains(err.Error(), "429") {
+			fmt.Println("API Quota Reached. Backing off for 30 seconds...")
+			time.Sleep(30 * time.Second)
+		} else {
+			fmt.Printf("Vertex API Error (Retrying in 5s): %v\n", err)
+			time.Sleep(5 * time.Second)
+		}
 		return StateObserve, nil
 	}
 
@@ -139,10 +144,7 @@ func StateScroll(a *Agent) (State, error) {
 	fmt.Printf("\n[STATE] Scroll: Moving down the DM list... (Scroll Count: %d/3)\n", a.ScrollCount)
 	
 	if a.ScrollCount >= 3 {
-		fmt.Println("Hit max scroll depth. Refreshing page to catch new DMs.")
-		hardware.RefreshPage()
-		a.ScrollCount = 0
-		return StateObserve, nil
+		return StateSleep, nil
 	}
 
 	// Phase 7: Force mouse to hover over the exact safe zone of the inbox pane before scrolling
@@ -154,6 +156,24 @@ func StateScroll(a *Agent) (State, error) {
 	
 	// Let the screen settle
 	time.Sleep(2 * time.Second)
+	return StateObserve, nil
+}
+
+// StateSleep puts the agent into a 5-minute deep rest if no new DMs are found.
+func StateSleep(a *Agent) (State, error) {
+	fmt.Println("\n[STATE] Sleep: No new leads found. Entering deep sleep to protect Instagram account standing...")
+	hardware.ParkMouse()
+	
+	// Wait 5 minutes
+	time.Sleep(5 * time.Minute)
+
+	fmt.Println("Waking up. Refreshing page to catch new DMs.")
+	hardware.RefreshPage()
+	a.ScrollCount = 0
+
+	// Give the browser 5 seconds to load the page before observing
+	time.Sleep(5 * time.Second)
+
 	return StateObserve, nil
 }
 
@@ -174,8 +194,13 @@ func StateReadAndReply(a *Agent) (State, error) {
 
 	decision, err := a.Vision.AnalyzeImage(ctxFilter, imgBytes, filterPrompt)
 	if err != nil {
-		fmt.Printf("Vertex API Error analyzing image, backing out safely: %v\n", err)
-		time.Sleep(5 * time.Second)
+		if strings.Contains(err.Error(), "ResourceExhausted") || strings.Contains(err.Error(), "429") {
+			fmt.Println("API Quota Reached during Cognitive Filter. Backing off for 30 seconds...")
+			time.Sleep(30 * time.Second)
+		} else {
+			fmt.Printf("Vertex API Error analyzing image, backing out safely: %v\n", err)
+			time.Sleep(5 * time.Second)
+		}
 		return StateObserve, nil
 	}
 
@@ -258,5 +283,7 @@ func StateReadAndReply(a *Agent) (State, error) {
 	time.Sleep(2 * time.Second) // wait for send
 
 	// Desktop Split-Pane UI doesn't have a back button. Return straight to observe.
+	// API Throttling: Wait 5 seconds after sending before looking for the next DM to respect RPM limits
+	time.Sleep(5 * time.Second)
 	return StateObserve, nil
 }
