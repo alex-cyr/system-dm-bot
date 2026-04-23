@@ -69,6 +69,9 @@ func main() {
 func StateObserve(a *Agent) (State, error) {
 	fmt.Println("\n[STATE] Observe: Scanning for unread messages...")
 	
+	// Park the mouse in the corner to prevent CSS hover menus from expanding and blocking the screenshot
+	hardware.ParkMouse()
+
 	// Give the UI a moment to settle before taking screenshot
 	time.Sleep(2 * time.Second)
 
