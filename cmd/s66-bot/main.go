@@ -77,9 +77,10 @@ func StateObserve(a *Agent) (State, error) {
 
 	screenWidth, screenHeight := hardware.GetScreenDimensions()
 	
-	// Crop bounds for Inbox Pane: 4% to 26% of screen width. Height: 15% down to bottom.
+	// Crop bounds for Inbox Pane: 4% to 37% of screen width. Height: 15% down to bottom.
+	// We use 33% width to ensure the blue dots on the far right are captured even if the browser is zoomed to 150%.
 	inboxX := int(float64(screenWidth) * 0.04)
-	inboxW := int(float64(screenWidth) * 0.22)
+	inboxW := int(float64(screenWidth) * 0.33)
 	inboxY := int(float64(screenHeight) * 0.15)
 	inboxH := int(float64(screenHeight) * 0.85)
 
@@ -137,9 +138,8 @@ func StateScroll(a *Agent) (State, error) {
 		return StateObserve, nil
 	}
 
-	// Phase 7: Force mouse to hover over the left inbox pane before scrolling
-	// Moved down to Y:750 to prevent accidentally scrolling the top "Stories" section
-	hardware.MoveSmooth(250, 750)
+	// Phase 7: Force mouse to hover over the exact safe zone of the inbox pane before scrolling
+	hardware.ParkMouse()
 	time.Sleep(500 * time.Millisecond)
 
 	hardware.ScrollDown()

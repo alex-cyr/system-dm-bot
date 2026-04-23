@@ -44,10 +44,13 @@ func Click() {
 	robotgo.Click("left")
 }
 
-// ParkMouse moves the mouse to the middle-left edge of the screen to prevent accidental CSS hover menus or Windows Close buttons from blocking vision.
+// ParkMouse moves the mouse to the 'safe zone' inside the DM list to prevent accidental CSS hover menus on the left nav, and ensures scrolling works in the correct pane.
 func ParkMouse() {
-	_, screenHeight := GetScreenDimensions()
-	robotgo.Move(10, screenHeight/2)
+	screenWidth, screenHeight := GetScreenDimensions()
+	// Park exactly in the center of the inbox pane (approx 20% of screen width) and low down
+	safeX := int(float64(screenWidth) * 0.20)
+	safeY := int(float64(screenHeight) * 0.80)
+	robotgo.Move(safeX, safeY)
 }
 
 // TypeStrDelay slowly types out text imitating human speed rhythms.
