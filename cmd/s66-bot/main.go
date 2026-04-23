@@ -72,12 +72,20 @@ func StateObserve(a *Agent) (State, error) {
 	// Give the UI a moment to settle before taking screenshot
 	time.Sleep(2 * time.Second)
 
-	imgBytes, err := hardware.CaptureScreen()
+	screenWidth, screenHeight := hardware.GetScreenDimensions()
+	
+	// Crop bounds for Inbox Pane: 4% to 26% of screen width. Height: 15% down to bottom.
+	inboxX := int(float64(screenWidth) * 0.04)
+	inboxW := int(float64(screenWidth) * 0.22)
+	inboxY := int(float64(screenHeight) * 0.15)
+	inboxH := int(float64(screenHeight) * 0.85)
+
+	imgBytes, err := hardware.CaptureRect(inboxX, inboxY, inboxW, inboxH)
 	if err != nil {
 		return nil, err
 	}
 
-	prompt := "Find the unread message blue dot indicator in the inbox list pane (which is the middle-left column). Ignore any icons on the far-left black navigation bar. Return only the bounding box [ymin, xmin, ymax, xmax]. If there are no unread messages, return NONE."
+	prompt := "Find the unread message blue dot indicator. Return only the bounding box [ymin, xmin, ymax, xmax]. If there are no unread messages, return NONE."
 	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
 	if err != nil {
 		if strings.Contains(err.Error(), "could not find bounding box") || strings.Contains(err.Error(), "NONE") {
@@ -87,26 +95,22 @@ func StateObserve(a *Agent) (State, error) {
 		return nil, err
 	}
 
-	// Calculate absolute pixel center
+	// Calculate pixel center RELATIVE to the crop
 	yCenter := (coords[0] + coords[2]) / 2
 	xCenter := (coords[1] + coords[3]) / 2
 	
-	screenWidth, screenHeight := hardware.GetScreenDimensions()
-	
-	// Convert normalized (0.0 - 1000.0) to absolute screen pixels dynamically for ANY monitor.
-	absoluteX := int((xCenter / 1000.0) * float64(screenWidth))
-	absoluteY := int((yCenter / 1000.0) * float64(screenHeight))
+	// Convert normalized (0.0 - 1000.0) to absolute pixels relative to crop
+	cropX := int((xCenter / 1000.0) * float64(inboxW))
+	cropY := int((yCenter / 1000.0) * float64(inboxH))
 
-	// Filter out far-left navigation bar hallucinations (e.g., Search icon)
-	if absoluteX < 150 {
-		fmt.Println("Ignored blue dot hallucination on the far-left nav bar.")
-		return StateScroll, nil
-	}
+	// Translate crop-relative pixels to true global screen pixels
+	absoluteX := inboxX + cropX
+	absoluteY := inboxY + cropY
 
 	// Hardening Phase 4: Offset X to click the profile picture/name instead of the far-right blue dot void
 	absoluteX -= 200
-	if absoluteX < 150 {
-		absoluteX = 150
+	if absoluteX < inboxX {
+		absoluteX = inboxX // clamp to start of inbox pane
 	}
 
 	fmt.Printf("Found unread message at X: %d, Y: %d\n", absoluteX, absoluteY)
@@ -115,8 +119,8 @@ func StateObserve(a *Agent) (State, error) {
 	hardware.MoveSmooth(absoluteX, absoluteY)
 	hardware.Click()
 
-	// Wait 6 seconds for internet lag to safely load the chat page
-	time.Sleep(6 * time.Second)
+	// Wait 3 seconds for internet lag to safely load the chat page (reduced from 6s)
+	time.Sleep(3 * time.Second)
 
 	// Reset scroll memory since we found a lead
 	a.ScrollCount = 0
@@ -173,8 +177,21 @@ func StateReadAndReply(a *Agent) (State, error) {
 	fmt.Println("Cognitive Filter Decision: YES! Proceeding with pitch.")
 
 	// Locate the input box using highly precise text targeting
-	prompt := "Find the exact word 'Message...' inside the text input area at the bottom. Return only the bounding box."
-	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
+	screenWidth, screenHeight := hardware.GetScreenDimensions()
+	
+	// Crop bounds for Message Input Area: Bottom 20% of the right 70% of the screen
+	chatX := int(float64(screenWidth) * 0.30)
+	chatW := int(float64(screenWidth) * 0.70)
+	chatY := int(float64(screenHeight) * 0.80)
+	chatH := int(float64(screenHeight) * 0.20)
+
+	msgBytes, err := hardware.CaptureRect(chatX, chatY, chatW, chatH)
+	if err != nil {
+		return nil, err
+	}
+
+	prompt := "Find the exact word 'Message...' inside the text input area. Return only the bounding box."
+	coords, err := a.Vision.LocateElement(a.Ctx, msgBytes, prompt)
 	if err != nil {
 		fmt.Println("Could not find the message input box. Backing out.")
 		return StateObserve, nil
@@ -183,10 +200,11 @@ func StateReadAndReply(a *Agent) (State, error) {
 	yCenter := (coords[0] + coords[2]) / 2
 	xCenter := (coords[1] + coords[3]) / 2
 	
-	screenWidth, screenHeight := hardware.GetScreenDimensions()
+	cropX := int((xCenter / 1000.0) * float64(chatW))
+	cropY := int((yCenter / 1000.0) * float64(chatH))
 	
-	absoluteX := int((xCenter / 1000.0) * float64(screenWidth))
-	absoluteY := int((yCenter / 1000.0) * float64(screenHeight))
+	absoluteX := chatX + cropX
+	absoluteY := chatY + cropY
 
 	// Click into the message box
 	hardware.MoveSmooth(absoluteX, absoluteY)

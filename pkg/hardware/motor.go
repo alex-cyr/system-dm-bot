@@ -100,6 +100,26 @@ func CaptureScreen() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// CaptureRect returns a specific rectangular region of the screen as a JPEG byte slice.
+func CaptureRect(x, y, w, h int) ([]byte, error) {
+	fmt.Printf("Hardware: Capturing ROI buffer at X:%d Y:%d W:%d H:%d\n", x, y, w, h)
+	
+	img, err := robotgo.CaptureImg(x, y, w, h)
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture screen rect: %w", err)
+	}
+
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, &jpeg.Options{Quality: 85})
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode rect to JPEG: %w", err)
+	}
+
+	_ = os.WriteFile("debug_vision_roi.jpg", buf.Bytes(), 0644)
+
+	return buf.Bytes(), nil
+}
+
 // ScrollDown scrolls the mouse wheel down to see more DMs.
 func ScrollDown() {
 	fmt.Println("Hardware: Scrolling down")
