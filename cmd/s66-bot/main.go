@@ -88,7 +88,7 @@ func StateObserve(a *Agent) (State, error) {
 		return nil, err
 	}
 
-	prompt := "Find the unread message blue dot indicator. Return only the bounding box [ymin, xmin, ymax, xmax]. If there are no unread messages, return NONE."
+	prompt := "Find an unread incoming direct message row in this inbox list. Unread messages have a blue dot on the far right, the text is brighter, and they do NOT start with 'You:'. Return the bounding box [ymin, xmin, ymax, xmax] of the ENTIRE row for the unread message. If there are no unread messages, return NONE."
 	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
 	if err != nil {
 		if strings.Contains(err.Error(), "could not find bounding box") || strings.Contains(err.Error(), "NONE") {

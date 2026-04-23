@@ -44,10 +44,10 @@ func Click() {
 	robotgo.Click("left")
 }
 
-// ParkMouse moves the mouse to the top right of the screen to prevent accidental CSS hover menus from blocking vision.
+// ParkMouse moves the mouse to the middle-left edge of the screen to prevent accidental CSS hover menus or Windows Close buttons from blocking vision.
 func ParkMouse() {
-	screenWidth, _ := GetScreenDimensions()
-	robotgo.Move(screenWidth-10, 10)
+	_, screenHeight := GetScreenDimensions()
+	robotgo.Move(10, screenHeight/2)
 }
 
 // TypeStrDelay slowly types out text imitating human speed rhythms.
