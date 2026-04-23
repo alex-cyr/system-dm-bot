@@ -67,8 +67,13 @@ func PasteText(text string) error {
 	// Give the OS a tiny fraction of a second to register the clipboard write
 	time.Sleep(100 * time.Millisecond)
 	
-	// Simulate physical Ctrl + V
-	robotgo.KeyTap("v", "control")
+	// Simulate physical Ctrl + V robustly using toggles
+	robotgo.KeyToggle("control", "down")
+	time.Sleep(50 * time.Millisecond)
+	robotgo.KeyTap("v")
+	time.Sleep(50 * time.Millisecond)
+	robotgo.KeyToggle("control", "up")
+	
 	time.Sleep(500 * time.Millisecond)
 	return nil
 }
