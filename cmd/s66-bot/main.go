@@ -90,13 +90,20 @@ func StateObserve(a *Agent) (State, error) {
 	}
 
 	prompt := "Find an unread incoming direct message row in this inbox list. Unread messages have a blue dot on the far right, the text is brighter, and they do NOT start with 'You:'. Return the bounding box [ymin, xmin, ymax, xmax] of the ENTIRE row for the unread message. If there are no unread messages, return NONE."
-	coords, err := a.Vision.LocateElement(a.Ctx, imgBytes, prompt)
+	
+	// Add a 15-second timeout to prevent the bot from hanging if the Google Cloud API stalls
+	ctx, cancel := context.WithTimeout(a.Ctx, 15*time.Second)
+	defer cancel()
+
+	coords, err := a.Vision.LocateElement(ctx, imgBytes, prompt)
 	if err != nil {
 		if strings.Contains(err.Error(), "could not find bounding box") || strings.Contains(err.Error(), "NONE") {
 			fmt.Println("No unread messages found in this viewport.")
 			return StateScroll, nil
 		}
-		return nil, err
+		fmt.Printf("Vertex API Error (Retrying in 5s): %v\n", err)
+		time.Sleep(5 * time.Second)
+		return StateObserve, nil
 	}
 
 	// Calculate pixel center RELATIVE to the crop (only care about Y now)
@@ -161,9 +168,14 @@ func StateReadAndReply(a *Agent) (State, error) {
 
 	// Cognitive Filter: YES / NO
 	filterPrompt := "Read this Instagram conversation. Is this user a potential new lead for a music video? Pay extremely close attention to Atlanta slang and informal DMs. Examples of leads: 'whats da tixket' (what's the price), 'how much for a vid', 'yall shooting?', 'wya', 'send rates', 'need sum work done'. Any inquiry about price, info, availability, or video packages is a lead. If they are a friend, a past client, or explicitly not interested, reply with exactly 'NO'. If they are a new potential lead, reply with exactly 'YES'."
-	decision, err := a.Vision.AnalyzeImage(a.Ctx, imgBytes, filterPrompt)
+	
+	ctxFilter, cancelFilter := context.WithTimeout(a.Ctx, 15*time.Second)
+	defer cancelFilter()
+
+	decision, err := a.Vision.AnalyzeImage(ctxFilter, imgBytes, filterPrompt)
 	if err != nil {
-		fmt.Println("Error analyzing image, backing out safely.")
+		fmt.Printf("Vertex API Error analyzing image, backing out safely: %v\n", err)
+		time.Sleep(5 * time.Second)
 		return StateObserve, nil
 	}
 
@@ -189,9 +201,13 @@ func StateReadAndReply(a *Agent) (State, error) {
 	}
 
 	prompt := "Find the exact word 'Message...' inside the text input area. Return only the bounding box."
-	coords, err := a.Vision.LocateElement(a.Ctx, msgBytes, prompt)
+	
+	ctxLocate, cancelLocate := context.WithTimeout(a.Ctx, 15*time.Second)
+	defer cancelLocate()
+
+	coords, err := a.Vision.LocateElement(ctxLocate, msgBytes, prompt)
 	if err != nil {
-		fmt.Println("Could not find the message input box. Backing out.")
+		fmt.Printf("Could not find the message input box. Backing out. Error: %v\n", err)
 		return StateObserve, nil
 	}
 
@@ -215,9 +231,12 @@ func StateReadAndReply(a *Agent) (State, error) {
 	fmt.Println("Cognitive Engine: Drafting personalized pitch...")
 	draftPrompt := fmt.Sprintf("Based on the following personality rules, draft a 1 to 2 sentence opening pitch to this Instagram user. Output ONLY the raw pitch text. Do not include quotes, markdown, or any other text.\n\nRules:\n%s", a.SkillPrompt)
 	
-	pitchText, err := a.Vision.AnalyzeImage(a.Ctx, imgBytes, draftPrompt)
+	ctxDraft, cancelDraft := context.WithTimeout(a.Ctx, 15*time.Second)
+	defer cancelDraft()
+
+	pitchText, err := a.Vision.AnalyzeImage(ctxDraft, imgBytes, draftPrompt)
 	if err != nil || pitchText == "" {
-		fmt.Println("Failed to draft pitch dynamically. Using fallback.")
+		fmt.Printf("Failed to draft pitch dynamically. Using fallback. Error: %v\n", err)
 		pitchText = "Hey! We are an Atlanta video crew shooting $400 cinema-grade music videos. Let me know if you are interested in a shoot!"
 	}
 
