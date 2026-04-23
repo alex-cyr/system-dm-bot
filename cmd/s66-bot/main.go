@@ -95,23 +95,18 @@ func StateObserve(a *Agent) (State, error) {
 		return nil, err
 	}
 
-	// Calculate pixel center RELATIVE to the crop
+	// Calculate pixel center RELATIVE to the crop (only care about Y now)
 	yCenter := (coords[0] + coords[2]) / 2
-	xCenter := (coords[1] + coords[3]) / 2
 	
 	// Convert normalized (0.0 - 1000.0) to absolute pixels relative to crop
-	cropX := int((xCenter / 1000.0) * float64(inboxW))
 	cropY := int((yCenter / 1000.0) * float64(inboxH))
 
-	// Translate crop-relative pixels to true global screen pixels
-	absoluteX := inboxX + cropX
+	// Translate crop-relative Y to true global screen Y
 	absoluteY := inboxY + cropY
 
-	// Hardening Phase 4: Offset X to click the profile picture/name instead of the far-right blue dot void
-	absoluteX -= 200
-	if absoluteX < inboxX {
-		absoluteX = inboxX // clamp to start of inbox pane
-	}
+	// Hardening Phase 5: Completely ignore Vertex AI's X coordinate to prevent horizontal hallucinations.
+	// Hardcode the X click to the dead center of the Inbox Pane.
+	absoluteX := inboxX + (inboxW / 2)
 
 	fmt.Printf("Found unread message at X: %d, Y: %d\n", absoluteX, absoluteY)
 	
@@ -198,12 +193,11 @@ func StateReadAndReply(a *Agent) (State, error) {
 	}
 
 	yCenter := (coords[0] + coords[2]) / 2
-	xCenter := (coords[1] + coords[3]) / 2
 	
-	cropX := int((xCenter / 1000.0) * float64(chatW))
 	cropY := int((yCenter / 1000.0) * float64(chatH))
 	
-	absoluteX := chatX + cropX
+	// Hardening Phase 5: Ignore Vertex AI's X coordinate and hardcode to the center of the Chat Pane
+	absoluteX := chatX + (chatW / 2)
 	absoluteY := chatY + cropY
 
 	// Click into the message box
